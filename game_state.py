@@ -1,3 +1,4 @@
+# game_state.py
 import json
 import random
 from datetime import datetime, timedelta
@@ -19,9 +20,13 @@ class GameState:
         self.events_triggered = []
         self.active_events = []
 
+        # Новости дня
+        self.daily_news = []
+
     def next_day(self):
         """Переход на следующий день"""
         self.current_day += 1
+        self.daily_news = []  # Очищаем новости дня
 
         # Проверка условий победы/поражения
         self.check_victory_conditions()
@@ -43,6 +48,10 @@ class GameState:
             self.game_over = True
             self.defeat_reason = "uprising"
 
+    def add_news(self, news_text):
+        """Добавить новость дня"""
+        self.daily_news.append(news_text)
+
     def to_dict(self):
         """Сериализация состояния для сохранения"""
         return {
@@ -52,7 +61,8 @@ class GameState:
             'health': self.health,
             'game_over': self.game_over,
             'victory_type': self.victory_type,
-            'defeat_reason': self.defeat_reason
+            'defeat_reason': self.defeat_reason,
+            'daily_news': self.daily_news
         }
 
     def from_dict(self, data):

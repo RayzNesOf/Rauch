@@ -1,3 +1,4 @@
+# events.py
 import random
 
 
@@ -59,6 +60,30 @@ class EventManager:
                         "effects": {"resources_cost": 0.2, "loyalty_target": 50}
                     }
                 ]
+            ),
+
+            Event(
+                "Обнаружение заговора",
+                "Разведка докладывает о возможном заговоре среди министров.",
+                lambda gs, res, min, mil: min.discover_conspiracy(gs) is not None,
+                [
+                    {
+                        "text": "Арестовать заговорщиков",
+                        "effects": {"morale": -15, "order": 20, "remove_conspirators": True}
+                    },
+                    {
+                        "text": "Перевербовать заговорщиков",
+                        "effects": {"resources_cost": 0.3, "loyalty_chance": 0.7}
+                    },
+                    {
+                        "text": "Инсценировать ловушку для врага",
+                        "effects": {"double_agent_chance": 0.5, "risk": 0.4}
+                    },
+                    {
+                        "text": "Проигнорировать",
+                        "effects": {"coup_risk": 0.3}
+                    }
+                ]
             )
         ]
 
@@ -67,6 +92,9 @@ class EventManager:
     def check_daily_events(self, game_state, resources, ministers, military):
         """Проверка событий на текущий день"""
         triggered_events = []
+
+        # Проверяем заговоры
+        ministers.check_conspiracies(game_state)
 
         for event in self.events:
             if (event.is_triggered(game_state, resources, ministers, military) and
@@ -93,6 +121,24 @@ class EventManager:
                 if available_divs:
                     div = random.choice(available_divs)
                     div.soldiers = max(0, div.soldiers + effects["soldiers"])
+
+            # Обработка заговора
+            if event.name == "Обнаружение заговора":
+                conspirator = ministers.discover_conspiracy(game_state)
+                if conspirator:
+                    if choice_index == 0:  # Арест
+                        conspirator.is_conspirator = False
+                        conspirator.conspiracy_level = 0
+                        conspirator.loyalty = 0
+                        game_state.add_news(f"Министр {conspirator.name} арестован за заговор!")
+                    elif choice_index == 1:  # Перевербовать
+                        if random.random() < effects["loyalty_chance"]:
+                            conspirator.loyalty = 80
+                            conspirator.is_conspirator = False
+                            conspirator.conspiracy_level = 0
+                            game_state.add_news(f"Министр {conspirator.name} перевербован!")
+                    elif choice_index == 3:  # Проигнорировать
+                        conspirator.conspiracy_level = 100
 
             return f"Принято решение: {choice['text']}"
 

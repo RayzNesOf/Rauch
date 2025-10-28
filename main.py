@@ -80,6 +80,11 @@ class BerezovskyReichGame:
 
         battle_count = self.simulate_random_battles()
 
+        # Проверка заговоров и добавление новостей
+        conspiracies = self.ministers.check_conspiracies(self.game_state)
+        for conspiracy in conspiracies:
+            self.game_state.add_news(f"Обнаружены признаки заговора среди министров фракции {conspiracy.faction}")
+
         daily_events = self.events.check_daily_events(
             self.game_state, self.resources, self.ministers, self.military
         )

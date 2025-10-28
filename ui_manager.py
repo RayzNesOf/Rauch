@@ -368,6 +368,66 @@ class MilitaryPanel(Panel):
         return None
 
 
+class NewsPanel(Panel):
+    """Панель новостей дня"""
+
+    def __init__(self, x, y, width, height):
+        super().__init__(x, y, width, height, "Новости дня")
+        self.news_items = []
+        self.scroll_offset = 0
+        self.max_visible = 5
+
+    def update_news(self, game_state):
+        """Обновление новостей"""
+        self.news_items = game_state.daily_news
+
+    def draw(self, screen, fonts):
+        super().draw(screen, fonts)
+
+        y_offset = 50 - self.scroll_offset
+        visible_count = 0
+
+        for i, news in enumerate(self.news_items):
+            if visible_count >= self.max_visible:
+                break
+
+            if y_offset < self.rect.height - 30 and y_offset > 0:
+                # Разбиваем длинные новости на несколько строк
+                words = news.split()
+                lines = []
+                current_line = ""
+
+                for word in words:
+                    test_line = current_line + word + " "
+                    if fonts.small.size(test_line)[0] < self.rect.width - 30:
+                        current_line = test_line
+                    else:
+                        if current_line:
+                            lines.append(current_line.strip())
+                        current_line = word + " "
+
+                if current_line:
+                    lines.append(current_line.strip())
+
+                # Отрисовываем каждую строку новости
+                for line in lines:
+                    text_surf = fonts.small.render(line, True, Colors.WHITE)
+                    screen.blit(text_surf, (self.rect.x + 15, self.rect.y + y_offset))
+                    y_offset += 20
+                    visible_count += 0.2  # Учитываем многострочность
+
+                y_offset += 10  # Отступ между новостями
+                visible_count += 1
+
+    def handle_click(self, mouse_pos):
+        """Обработка прокрутки новостей"""
+        # Простая прокрутка при клике в области панели
+        if self.rect.collidepoint(mouse_pos):
+            max_scroll = max(0, len(self.news_items) * 30 - (self.rect.height - 50))
+            self.scroll_offset = min(max_scroll, self.scroll_offset + 30)
+        return None
+
+
 class UIManager:
     def __init__(self, screen_width=1200, screen_height=800):
         self.screen_width = screen_width
@@ -381,6 +441,7 @@ class UIManager:
         # Создание панелей
         self.resource_panel = ResourcePanel(10, 10, 250, 180)
         self.status_panel = StatusPanel(10, 200, 250, 200)
+        self.news_panel = NewsPanel(10, 410, 250, 180)  # Новая панель новостей
         self.map_panel = MapPanel(270, 10, 600, 400)
         self.minister_panel = MinisterPanel(880, 10, 310, 390)
         self.military_panel = MilitaryPanel(270, 420, 600, 370)
@@ -388,8 +449,8 @@ class UIManager:
         # Кнопки управления
         self.next_day_button = Button(880, 410, 150, 40, "Следующий день", Colors.GREEN)
         self.save_button = Button(1040, 410, 150, 40, "Сохранить игру", Colors.BLUE)
-        self.load_button = Button(880, 460, 150, 40, "Загрузить игру", Colors.YELLOW)  # Новая кнопка
-        self.info_button = Button(1040, 460, 150, 40, "Информация", Colors.LIGHT_GRAY)  # Новая кнопка
+        self.load_button = Button(880, 460, 150, 40, "Загрузить игру", Colors.YELLOW)
+        self.info_button = Button(1040, 460, 150, 40, "Информация", Colors.LIGHT_GRAY)
         self.menu_buttons = [self.next_day_button, self.save_button, self.load_button, self.info_button]
 
         # Кнопки для детальных экранов
@@ -403,6 +464,7 @@ class UIManager:
     def update_ui(self, game_state, resources, ministers, military):
         self.resource_panel.update_resources(resources)
         self.status_panel.update_status(game_state, military)
+        self.news_panel.update_news(game_state)  # Обновляем новости
         self.minister_panel.update_ministers(ministers)
         self.military_panel.update_divisions(military)
 
@@ -411,6 +473,7 @@ class UIManager:
 
         self.resource_panel.draw(self.screen, self.fonts)
         self.status_panel.draw(self.screen, self.fonts)
+        self.news_panel.draw(self.screen, self.fonts)  # Отрисовываем новости
         self.map_panel.draw(self.screen, self.fonts)
         self.minister_panel.draw(self.screen, self.fonts)
         self.military_panel.draw(self.screen, self.fonts)
@@ -546,7 +609,7 @@ class UIManager:
 
         title_surf = self.fonts.title.render("БЕРЕЗОВСКИЙ РЕЙХ", True, Colors.WHITE)
         subtitle_surf = self.fonts.large.render("ПОСЛЕДНИЙ РУБЕЖ", True, Colors.RED)
-        version_surf = self.fonts.medium.render("Версия 1.1.2А", True, Colors.YELLOW)
+        version_surf = self.fonts.medium.render("Версия 1.1.3", True, Colors.YELLOW)
         author_surf = self.fonts.medium.render("Разработчик: MATS STUDIO", True, Colors.WHITE)
 
         # Инструкция
@@ -599,9 +662,9 @@ class UIManager:
                 return "next_day"
             if self.save_button.is_clicked(mouse_pos, mouse_click):
                 return "save_game"
-            if self.load_button.is_clicked(mouse_pos, mouse_click):  # Новая кнопка загрузки
+            if self.load_button.is_clicked(mouse_pos, mouse_click):
                 return "load_game"
-            if self.info_button.is_clicked(mouse_pos, mouse_click):  # Новая кнопка информации
+            if self.info_button.is_clicked(mouse_pos, mouse_click):
                 return "show_info"
 
             # Проверка кликов по панелям
@@ -616,6 +679,11 @@ class UIManager:
             division_click = self.military_panel.handle_click(mouse_pos)
             if division_click:
                 return division_click
+
+            # Проверка кликов по панели новостей
+            news_click = self.news_panel.handle_click(mouse_pos)
+            if news_click:
+                return "news_scroll"
 
         elif self.current_screen in ["building_detail", "minister_detail", "division_detail", "info"]:
             # Проверка кнопок детальных экранов
