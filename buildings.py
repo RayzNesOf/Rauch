@@ -33,7 +33,6 @@ class Building:
             return True
         return False
 
-
 class BuildingManager:
     def __init__(self):
         self.buildings = self.initialize_buildings()
@@ -47,10 +46,10 @@ class BuildingManager:
             Building("Подземная фабрика", "military_production", 1, 1.0),
             Building("Электростанция", "power", 1, 1.0),
             Building("Котельная", "fuel", 1, 1.0),
-            Building("Стадион", "morale", 1, 1.0),
             Building("Больница", "health", 1, 1.0),
-            Building("Общага", "housing", 1, 0.8),
+            Building("Пожарная часть", "safety", 1, 1.0),
             Building("Церковь Св. Николая", "morale", 1, 1.0),
+            Building("АЗС", "fuel", 1, 1.0),
             Building("Церковь Покрова", "morale", 1, 1.0),
             Building("Отделение СС", "military", 1, 1.0),
         ]

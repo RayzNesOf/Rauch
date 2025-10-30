@@ -148,10 +148,7 @@ class StatusPanel(Panel):
             screen.blit(text_surf, (self.rect.x + 15, self.rect.y + y_offset))
             y_offset += 25
 
-
 class MapPanel(Panel):
-    """Панель карты района"""
-
     def __init__(self, x, y, width, height):
         super().__init__(x, y, width, height, "Карта Центрального Района")
         self.buildings = []
@@ -161,20 +158,36 @@ class MapPanel(Panel):
         """Инициализация зданий на карте"""
         self.buildings = []
 
-        # Позиции зданий на карте (относительные координаты)
+        # Позиции зданий на карте (относительные координаты в масштабе 1px = 10 метров)
         building_positions = {
-            "Рейхстаг": (100, 100),
-            "Завод продуктов": (200, 150),
-            "Пекарня": (250, 200),
-            "Подземная фабрика": (150, 250),
-            "Электростанция": (300, 100),
-            "Котельная": (350, 180),
-            "Стадион": (400, 250),
-            "Больница": (180, 320),
-            "Общага": (280, 300),
-            "Церковь Св. Николая": (120, 380),
-            "Церковь Покрова": (380, 350),
-            "Отделение СС": (220, 80)
+            "Рейхстаг": (300, 200),  # центр
+            "Отделение СС": (250, 200),  # 65 метров к востоку
+            "Электростанция": (150, 350),  # 620 метров северо-запад (62px по x, 62px по y)
+            "Завод продуктов": (450, 200),  # 770 метров к востоку
+            "Пекарня": (350, 169),  # 310 метров северо-запад (31px по x, 31px по y)
+            "Котельная": (400, 144),  # 560 метров к северу
+            "Подземная фабрика": (300, 144),  # 140 метров к югу
+            "Больница": (150, 200),  # 400 метров к западу
+            "Пожарная часть": (400, 250),  # 310 метров к востоку
+            "Церковь Св. Николая": (550, 200),  # 1.2 км к востоку
+            "АЗС": (410, 90),  # 1.1 км к востоку
+            "Церковь Покрова": (300, 300),  # 860 метров к северу
+        }
+
+        # Сокращенные названия для отображения
+        short_names = {
+            "Рейхстаг": "Рейхстаг",
+            "Отделение СС": "СС",
+            "Электростанция": "Электрост.",
+            "Завод продуктов": "Завод",
+            "Пекарня": "Пекарня",
+            "Котельная": "Котельная",
+            "Подземная фабрика": "Фабрика",
+            "Больница": "Больница",
+            "Пожарная часть": "Пожарная",
+            "Церковь Св. Николая": "Церковь №1",
+            "АЗС": "АЗС",
+            "Церковь Покрова": "Церковь №2"
         }
 
         for name, pos in building_positions.items():
@@ -182,6 +195,7 @@ class MapPanel(Panel):
             if building:
                 self.buildings.append({
                     'name': name,
+                    'short_name': short_names.get(name, name),
                     'position': (self.rect.x + pos[0], self.rect.y + pos[1]),
                     'building': building,
                     'rect': pygame.Rect(self.rect.x + pos[0] - 20, self.rect.y + pos[1] - 20, 40, 40)
@@ -199,9 +213,8 @@ class MapPanel(Panel):
             pygame.draw.rect(screen, color, bld['rect'])
             pygame.draw.rect(screen, Colors.WHITE, bld['rect'], 1)
 
-            # Название здания (сокращенное)
-            short_name = bld['name'].split()[-1]  # Берем последнее слово
-            text_surf = fonts.small.render(short_name, True, Colors.WHITE)
+            # Используем короткое название здания
+            text_surf = fonts.small.render(bld['short_name'], True, Colors.WHITE)
             text_rect = text_surf.get_rect(center=bld['rect'].center)
             screen.blit(text_surf, text_rect)
 
@@ -315,57 +328,98 @@ class MilitaryPanel(Panel):
         super().__init__(x, y, width, height, "Военные силы")
         self.divisions = []
         self.scroll_offset = 0
-        self.division_buttons = []  # Новое: кнопки для дивизий
+        self.max_visible = 6  # Максимум видимых дивизий
+        self.division_buttons = []
+        self.scroll_up_button = Button(x + width - 30, y + 40, 25, 25, "↑", Colors.GRAY)
+        self.scroll_down_button = Button(x + width - 30, y + height - 30, 25, 25, "↓", Colors.GRAY)
 
     def update_divisions(self, military_manager):
+        """Обновление списка дивизий"""
         self.divisions = list(military_manager.divisions.values())
+        self.update_division_buttons()
+
+    def update_division_buttons(self):
+        """Обновление позиций кнопок дивизий с учетом прокрутки"""
         self.division_buttons = []
 
-        # Создаем кнопки для каждой дивизии
-        y_offset = 50
-        for division in self.divisions:
-            button_rect = pygame.Rect(self.rect.x + 10, self.rect.y + y_offset - 5,
-                                      self.rect.width - 20, 45)
-            self.division_buttons.append({
-                'rect': button_rect,
-                'division': division
-            })
-            y_offset += 50
+        start_index = self.scroll_offset // 50
+        visible_count = min(self.max_visible, len(self.divisions) - start_index)
+
+        for i in range(visible_count):
+            division_index = start_index + i
+            if division_index < len(self.divisions):
+                division = self.divisions[division_index]
+                y_offset = 50 + (i * 50) - (self.scroll_offset % 50)
+
+                button_rect = pygame.Rect(
+                    self.rect.x + 10,
+                    self.rect.y + y_offset - 5,
+                    self.rect.width - 40,
+                    45
+                )
+                self.division_buttons.append({
+                    'rect': button_rect,
+                    'division': division,
+                    'index': division_index
+                })
 
     def draw(self, screen, fonts):
         super().draw(screen, fonts)
 
-        y_offset = 50 - self.scroll_offset
-        for i, division in enumerate(self.divisions):
-            if y_offset < self.rect.height - 30 and y_offset > 0:
-                color = Colors.RED if "СС" in division.name else Colors.BLUE
-                status_color = Colors.GREEN if not division.is_engaged else Colors.RED
+        # Отрисовка кнопок прокрутки
+        self.scroll_up_button.draw(screen, fonts)
+        self.scroll_down_button.draw(screen, fonts)
 
-                # Название дивизии
-                text = f"{division.name}"
-                text_surf = fonts.small.render(text, True, color)
-                screen.blit(text_surf, (self.rect.x + 15, self.rect.y + y_offset))
+        # Отрисовка видимых дивизий
+        for button_data in self.division_buttons:
+            division = button_data['division']
+            rect = button_data['rect']
 
-                # Статус и численность
-                status = "СВОБОДНА" if not division.is_engaged else "ЗАНЯТА"
-                details = f"{division.soldiers} солдат - {status}"
-                details_surf = fonts.small.render(details, True, status_color)
-                screen.blit(details_surf, (self.rect.x + 15, self.rect.y + y_offset + 20))
+            # Цвет в зависимости от типа
+            color = Colors.RED if "СС" in division.name else Colors.BLUE
+            status_color = Colors.GREEN if not division.is_engaged else Colors.RED
 
-                # Полоска морали
-                morale_rect = pygame.Rect(self.rect.x + 15, self.rect.y + y_offset + 35,
-                                          division.morale * 2, 6)
-                pygame.draw.rect(screen, Colors.YELLOW, morale_rect)
-                pygame.draw.rect(screen, Colors.WHITE, morale_rect, 1)
+            # Фон кнопки
+            pygame.draw.rect(screen, Colors.DARK_GRAY, rect)
+            pygame.draw.rect(screen, color, rect, 2)
 
-            y_offset += 50
+            # Название дивизии
+            text = f"{division.name}"
+            text_surf = fonts.small.render(text, True, color)
+            screen.blit(text_surf, (rect.x + 5, rect.y + 5))
+
+            # Статус и численность
+            status = "СВОБОДНА" if not division.is_engaged else "ЗАНЯТА"
+            details = f"{division.soldiers} солдат - {status}"
+            details_surf = fonts.small.render(details, True, status_color)
+            screen.blit(details_surf, (rect.x + 5, rect.y + 20))
+
+            # Полоска морали
+            morale_rect = pygame.Rect(rect.x + 5, rect.y + 35, min(division.morale * 2, rect.width - 10), 6)
+            pygame.draw.rect(screen, Colors.YELLOW, morale_rect)
+            pygame.draw.rect(screen, Colors.WHITE, morale_rect, 1)
 
     def handle_click(self, mouse_pos):
         """Обработка клика по дивизиям"""
+        # Проверка кнопок прокрутки
+        if self.scroll_up_button.is_clicked(mouse_pos, True):
+            self.scroll_offset = max(0, self.scroll_offset - 50)
+            self.update_division_buttons()
+            return None
+
+        if self.scroll_down_button.is_clicked(mouse_pos, True):
+            max_scroll = max(0, len(self.divisions) * 50 - (self.rect.height - 50))
+            self.scroll_offset = min(max_scroll, self.scroll_offset + 50)
+            self.update_division_buttons()
+            return None
+
+        # Проверка кликов по дивизиям
         for button_data in self.division_buttons:
             if button_data['rect'].collidepoint(mouse_pos):
                 return ("division_click", button_data['division'])
+
         return None
+
 
 
 class NewsPanel(Panel):
@@ -609,7 +663,7 @@ class UIManager:
 
         title_surf = self.fonts.title.render("БЕРЕЗОВСКИЙ РЕЙХ", True, Colors.WHITE)
         subtitle_surf = self.fonts.large.render("ПОСЛЕДНИЙ РУБЕЖ", True, Colors.RED)
-        version_surf = self.fonts.medium.render("Версия 1.1.3", True, Colors.YELLOW)
+        version_surf = self.fonts.medium.render("Версия 1.1.3А", True, Colors.YELLOW)
         author_surf = self.fonts.medium.render("Разработчик: MATS STUDIO", True, Colors.WHITE)
 
         # Инструкция

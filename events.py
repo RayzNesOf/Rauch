@@ -84,10 +84,71 @@ class EventManager:
                         "effects": {"coup_risk": 0.3}
                     }
                 ]
+            ),
+            Event(
+                "Голодные дети в больнице",
+                "Дети в больнице умирают от голода. Врачи просят дополнительные пайки для спасения жизней.",
+                lambda gs, res, min, mil: res.food < 300 and gs.health < 60,
+                [
+                    {
+                        "text": "Отдать детские пайки",
+                        "effects": {"food": -50, "morale": 10, "soldier_health": -15, "humanism": 20}
+                    },
+                    {
+                        "text": "Оставить как есть",
+                        "effects": {"morale": -20, "cruelty": 15, "rumor": "жестокость"}
+                    },
+                    {
+                        "text": "Конфисковать еду у богатых",
+                        "effects": {"morale": -30, "food": 100, "elite_morale": -40, "pragmatism": 10}
+                    }
+                ]
+            ),
+
+            Event(
+                "Пленный командир врага",
+                "Взят в плен бывший друг детства Макара. Он предлагает сотрудничество.",
+                lambda gs, res, min, mil: random.random() < 0.3 and gs.current_day > 10,
+                [
+                    {
+                        "text": "Казнить как предателя",
+                        "effects": {"morale_radicals": 10, "morale_diplomats": -15, "cruelty": 25, "ideology": 15}
+                    },
+                    {
+                        "text": "Предложить перейти на свою сторону",
+                        "effects": {"conversion_chance": 0.4, "betrayal_risk": 0.3, "pragmatism": 20}
+                    },
+                    {
+                        "text": "Обменять на своих солдат",
+                        "effects": {"soldiers_rescued": 50, "prestige_loss": 20, "humanism": 25}
+                    }
+                ]
+            ),
+
+            Event(
+                "Саботаж на фабрике",
+                "Рабочие саботируют производство из-за голодных условий труда.",
+                lambda gs, res, min, mil: res.food < 200 and gs.morale < 40,
+                [
+                    {
+                        "text": "Жестоко наказать зачинщиков",
+                        "effects": {"morale": -20, "production_boost": 1.3, "cruelty": 30}
+                    },
+                    {
+                        "text": "Улучшить пайки рабочим",
+                        "effects": {"food_daily": -100, "morale": 15, "humanism": 20}
+                    },
+                    {
+                        "text": "Найти компромисс",
+                        "effects": {"food": -10, "morale": 5, "pragmatism": 15, "negotiation_success": 0.8}
+                    }
+                ]
             )
         ]
 
         return events
+
+
 
     def check_daily_events(self, game_state, resources, ministers, military):
         """Проверка событий на текущий день"""

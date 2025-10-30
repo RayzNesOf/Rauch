@@ -378,8 +378,20 @@ class BerezovskyReichGame:
             if self.game_state.victory_type:
                 title = "ПОБЕДА!"
                 color = Colors.GREEN
+
+                # Разные сообщения для разных концовок
                 if self.game_state.victory_type == "defense_miracle":
                     message = "Чудо обороны! Березовский Рейх выстоял 45 дней!"
+                elif self.game_state.victory_type == "bloody_tyrant":
+                    message = "Вы стали кровавым тираном, но выжили ценой тысяч жизней."
+                elif self.game_state.victory_type == "people_martyr":
+                    message = "Вы погибли как народный мученик, став легендой для будущих поколений."
+                elif self.game_state.victory_type == "pragmatic_leader":
+                    message = "Прагматичный подход позволил спасти максимальное число людей."
+                elif self.game_state.victory_type == "idealist_fanatic":
+                    message = "Вы сохранили идеалы до конца, став символом непоколебимой веры."
+                else:
+                    message = "Неизвестная концовка"
             else:
                 title = "ПОРАЖЕНИЕ"
                 color = Colors.RED
@@ -388,17 +400,30 @@ class BerezovskyReichGame:
 
             title_surf = self.ui.fonts.title.render(title, True, color)
             message_surf = self.ui.fonts.large.render(message, True, Colors.WHITE)
-            stats_surf = self.ui.fonts.medium.render(
-                f"Вы продержались {self.game_state.current_day} дней. "
-                f"Население: {self.game_state.population}. "
+
+            # Статистика игрока
+            stats_text = [
+                f"Вы продержались {self.game_state.current_day} дней",
+                f"Население: {self.game_state.population}",
                 f"Финальная мораль: {self.game_state.morale}%",
-                True, Colors.YELLOW
-            )
+                f"Гуманизм: {self.game_state.humanism}",
+                f"Жестокость: {self.game_state.cruelty}",
+                f"Прагматизм: {self.game_state.pragmatism}",
+                f"Идеология: {self.game_state.ideology}"
+            ]
+
             prompt_surf = self.ui.fonts.medium.render("Нажмите любую клавишу для выхода...", True, Colors.WHITE)
 
-            self.ui.screen.blit(title_surf, (self.ui.screen_width // 2 - title_surf.get_width() // 2, 200))
-            self.ui.screen.blit(message_surf, (self.ui.screen_width // 2 - message_surf.get_width() // 2, 300))
-            self.ui.screen.blit(stats_surf, (self.ui.screen_width // 2 - stats_surf.get_width() // 2, 350))
+            self.ui.screen.blit(title_surf, (self.ui.screen_width // 2 - title_surf.get_width() // 2, 150))
+            self.ui.screen.blit(message_surf, (self.ui.screen_width // 2 - message_surf.get_width() // 2, 220))
+
+            # Отрисовка статистики
+            y_offset = 270
+            for line in stats_text:
+                stat_surf = self.ui.fonts.medium.render(line, True, Colors.YELLOW)
+                self.ui.screen.blit(stat_surf, (self.ui.screen_width // 2 - stat_surf.get_width() // 2, y_offset))
+                y_offset += 30
+
             self.ui.screen.blit(prompt_surf, (self.ui.screen_width // 2 - prompt_surf.get_width() // 2, 450))
 
             pygame.display.flip()
